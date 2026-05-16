@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-processor
+  namespace: cloud-native-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: file-processor
+  template:
+    metadata:
+      labels:
+        app: file-processor
+    spec:
+      containers:
+      - name: file-processor
+        image: file-processor:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
