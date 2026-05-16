@@ -1,0 +1,46 @@
+# Configuration file for the Spring Boot application.
+# Includes settings for exposing actuator endpoints and configuring the AWS client.
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: java-s3-demo-app
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# Configuration parameters for LocalStack S3 integration
+aws:
+  s3:
+    # Endpoint URI of LocalStack (either localhost or service inside Kubernetes)
+    endpoint: ${AWS_S3_ENDPOINT:http://localhost:4566}
+    # Target AWS region
+    region: ${AWS_REGION:us-east-1}
+    # Fake access key ID for local AWS emulation
+    access-key-id: ${AWS_ACCESS_KEY_ID:mock_key}
+    # Fake secret access key for local AWS emulation
+    secret-access-key: ${AWS_SECRET_ACCESS_KEY:mock_secret}
+    # Name of the pre-configured S3 bucket
+    bucket-name: ${AWS_S3_BUCKET_NAME:my-java-bucket}
+
+# Actuator settings for exposing Prometheus metrics and health check probes
+management:
+  endpoints:
+    web:
+      exposure:
+        # Expose health and prometheus endpoints to public web interface
+        include: health, prometheus
+  endpoint:
+    health:
+      # Show full health status details
+      show-details: always
+      probes:
+        # Enable liveness and readiness state detection for Kubernetes
+        enabled: true
+  metrics:
+    tags:
+      # Add default tags to all metric recordings
+      application: ${spring.application.name}
