@@ -1,0 +1,74 @@
+# Purpose: LocalStack deployment manifests (Deployment, Service, initialization ConfigMap).
+# Runs a mocked AWS environment inside Kubernetes to simulate AWS S3 storage.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: localstack-init
+  namespace: java-app-demo
+data:
+  # This shell script is executed automatically by LocalStack when it is fully ready
+  init-s3.sh: |
+    #!/usr/bin/env bash
+    echo "Creating AWS Local S3 buckets..."
+    awslocal s3 mb s3://my-java-bucket
+    echo "S3 buckets created successfully:"
+    awslocal s3 ls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localstack
+  namespace: java-app-demo
+  labels:
+    app: localstack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: localstack
+  template:
+    metadata:
+      labels:
+        app: localstack
+    spec:
+      containers:
+        - name: localstack
+          image: localstack/localstack:3.3.0
+          ports:
+            - containerPort: 4566
+              name: edge
+          env:
+            # Enable only the S3 service to reduce resource usage
+            - name: SERVICES
+              value: "s3"
+            # Set target region
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+            # Disable LocalStack usage analytics
+            - name: DISABLE_EVENTS
+              value: "1"
+          volumeMounts:
+            # Mount the initialization script ConfigMap into LocalStack readiness hooks directory
+            - name: init-scripts
+              mountPath: /etc/localstack/init/ready.d
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: localstack-init
+            defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localstack
+  namespace: java-app-demo
+  labels:
+    app: localstack
+spec:
+  ports:
+    - port: 4566
+      targetPort: 4566
+      name: edge
+  selector:
+    app: localstack

@@ -1,0 +1,7 @@
+# Purpose: Kubernetes Namespace configuration for grouping our resources.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: java-app-demo
+  labels:
+    name: java-app-demo

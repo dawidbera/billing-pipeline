@@ -1,0 +1,104 @@
+# Purpose: Kubernetes manifests for the Java Spring Boot application (Deployment, Service, Ingress).
+# Configured with resource limits, liveness/readiness probes, AWS env vars, and Prometheus annotations.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-app
+  namespace: java-app-demo
+  labels:
+    app: java-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-app
+  template:
+    metadata:
+      labels:
+        app: java-app
+      annotations:
+        # Monitoring annotations telling Prometheus to scrape Actuator metrics on port 8080
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: java-app
+          # Image loaded locally in the k3d cluster
+          image: java-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            # Resource constraints according to cluster policy and production safety
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+          env:
+            # Point Java app to localstack service running inside the same namespace
+            - name: AWS_S3_ENDPOINT
+              value: "http://localstack:4566"
+            - name: AWS_REGION
+              value: "us-east-1"
+            - name: AWS_ACCESS_KEY_ID
+              value: "mock_access_key"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "mock_secret_key"
+            - name: AWS_S3_BUCKET_NAME
+              value: "my-java-bucket"
+          livenessProbe:
+            # Probe checking container runtime health
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            # Probe checking application readiness to accept requests
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-app
+  namespace: java-app-demo
+  labels:
+    app: java-app
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  selector:
+    app: java-app
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: java-app-ingress
+  namespace: java-app-demo
+  annotations:
+    # Traefik is the ingress controller used in k3s/k3d
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+    # Router based on Host header. Local host resolver directs java-app.localhost to 127.0.0.1
+    - host: java-app.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: java-app
+                port:
+                  number: 8080
