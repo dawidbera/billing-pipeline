@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: file-processor-monitor
+  namespace: cloud-native-app
+  labels:
+    release: prometheus
+    app: file-processor
+spec:
+  selector:
+    matchLabels:
+      app: file-processor
+  endpoints:
+    - port: http-metrics
+      path: /actuator/prometheus
+      interval: 15s
