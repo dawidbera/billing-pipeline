@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: file-processor
-        image: file-processor:latest
-        imagePullPolicy: Never
+        image: ghcr.io/dawidbera/billing-pipeline/file-processor:9d87f6ceb716c3cbf05e7aed39fcbcd3dd1d9b6c
+        imagePullPolicy: Always
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
