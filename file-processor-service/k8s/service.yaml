@@ -1,8 +1,12 @@
+# Purpose: Kubernetes Service exposing File Processor application internally.
+# Configured with labels for Prometheus ServiceMonitor target discovery.
 apiVersion: v1
 kind: Service
 metadata:
   name: file-processor-service
   namespace: cloud-native-app
+  labels:
+    app: file-processor
 spec:
   selector:
     app: file-processor

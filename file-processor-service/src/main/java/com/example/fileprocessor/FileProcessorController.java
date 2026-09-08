@@ -12,11 +12,18 @@ import java.util.Map;
 @RequestMapping("/upload")
 public class FileProcessorController {
 
-    @Autowired
-    private FileProcessorService fileProcessorService;
+    private final FileProcessorService fileProcessorService;
+
+    public FileProcessorController(FileProcessorService fileProcessorService) {
+        this.fileProcessorService = fileProcessorService;
+    }
 
     @PostMapping
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "File cannot be empty"));
+        }
+
         try {
             String fileId = fileProcessorService.uploadFile(file.getBytes(), file.getOriginalFilename());
             return ResponseEntity.ok(Map.of(
@@ -24,7 +31,7 @@ public class FileProcessorController {
                     "fileId", fileId
             ));
         } catch (IOException e) {
-            return ResponseEntity.internalServerError().body("Error uploading file: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", "Error uploading file: " + e.getMessage()));
         }
     }
 }

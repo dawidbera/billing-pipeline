@@ -1,0 +1,13 @@
+# Purpose: Kubernetes ConfigMap holding non-sensitive configuration for File Processor Service.
+# Provides AWS S3 / LocalStack endpoint, region, and target bucket name.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: file-processor-config
+  namespace: cloud-native-app
+  labels:
+    app: file-processor
+data:
+  AWS_S3_ENDPOINT: "http://localstack.cloud-native-app:4566"
+  AWS_S3_REGION: "us-east-1"
+  AWS_S3_BUCKET: "processor-bucket"

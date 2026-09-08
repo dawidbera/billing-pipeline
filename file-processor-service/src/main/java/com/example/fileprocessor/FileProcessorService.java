@@ -13,22 +13,24 @@ import java.util.UUID;
 @Service
 public class FileProcessorService {
 
-    @Autowired
-    private S3Client s3Client;
+    private final S3Client s3Client;
+    private final String bucketName;
 
-    @Value("${aws.s3.bucket}")
-    private String bucketName;
+    public FileProcessorService(S3Client s3Client, @Value("${aws.s3.bucket}") String bucketName) {
+        this.s3Client = s3Client;
+        this.bucketName = bucketName;
+    }
 
     public String uploadFile(byte[] content, String fileName) throws IOException {
         String fileKey = UUID.randomUUID() + "-" + fileName;
-        
+
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(fileKey)
                 .build();
 
         s3Client.putObject(putObjectRequest, RequestBody.fromBytes(content));
-        
+
         return fileKey;
     }
 }

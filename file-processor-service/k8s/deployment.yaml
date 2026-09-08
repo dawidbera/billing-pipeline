@@ -17,6 +17,38 @@ spec:
       - name: file-processor
         image: file-processor:latest
         imagePullPolicy: Never
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        env:
+          - name: AWS_S3_ENDPOINT
+            valueFrom:
+              configMapKeyRef:
+                name: file-processor-config
+                key: AWS_S3_ENDPOINT
+          - name: AWS_S3_REGION
+            valueFrom:
+              configMapKeyRef:
+                name: file-processor-config
+                key: AWS_S3_REGION
+          - name: AWS_S3_BUCKET
+            valueFrom:
+              configMapKeyRef:
+                name: file-processor-config
+                key: AWS_S3_BUCKET
+          - name: AWS_S3_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: file-processor-secret
+                key: AWS_S3_ACCESS_KEY
+          - name: AWS_S3_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: file-processor-secret
+                key: AWS_S3_SECRET_KEY
         ports:
         - containerPort: 8080
         resources:
