@@ -32,11 +32,11 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build java-app with Maven
-        run: mvn -f java-app/pom.xml clean package -DskipTests
+      - name: Run java-app tests with Maven
+        run: mvn -f java-app/pom.xml clean test
 
-      - name: Build file-processor-service with Maven
-        run: mvn -f file-processor-service/pom.xml clean package -DskipTests
+      - name: Run file-processor-service tests with Maven
+        run: mvn -f file-processor-service/pom.xml clean test
 
       - name: Lowercase repo owner and name for Docker
         run: |

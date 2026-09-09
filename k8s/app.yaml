@@ -1,6 +1,31 @@
 # Purpose: Kubernetes manifests for the Java Spring Boot application (Deployment, Service, Ingress).
 # Configured with resource limits, liveness/readiness probes, AWS env vars, and Prometheus annotations.
+# Non-sensitive configuration is stored in ConfigMap and credentials are sourced from Secret.
 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: java-app-config
+  namespace: java-app-demo
+  labels:
+    app: java-app
+data:
+  AWS_S3_ENDPOINT: "http://localstack:4566"
+  AWS_REGION: "us-east-1"
+  AWS_S3_BUCKET_NAME: "my-java-bucket"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: java-app-secrets
+  namespace: java-app-demo
+  labels:
+    app: java-app
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: "mock_access_key"
+  AWS_SECRET_ACCESS_KEY: "mock_secret_key"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,17 +65,31 @@ spec:
               cpu: "250m"
               memory: "256Mi"
           env:
-            # Point Java app to localstack service running inside the same namespace
             - name: AWS_S3_ENDPOINT
-              value: "http://localstack:4566"
+              valueFrom:
+                configMapKeyRef:
+                  name: java-app-config
+                  key: AWS_S3_ENDPOINT
             - name: AWS_REGION
-              value: "us-east-1"
-            - name: AWS_ACCESS_KEY_ID
-              value: "mock_access_key"
-            - name: AWS_SECRET_ACCESS_KEY
-              value: "mock_secret_key"
+              valueFrom:
+                configMapKeyRef:
+                  name: java-app-config
+                  key: AWS_REGION
             - name: AWS_S3_BUCKET_NAME
-              value: "my-java-bucket"
+              valueFrom:
+                configMapKeyRef:
+                  name: java-app-config
+                  key: AWS_S3_BUCKET_NAME
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: java-app-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: java-app-secrets
+                  key: AWS_SECRET_ACCESS_KEY
           livenessProbe:
             # Probe checking container runtime health
             httpGet:
