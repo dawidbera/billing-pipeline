@@ -5,6 +5,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -33,8 +35,30 @@ class FileProcessorIntegrationTest {
 
     private static final String TEST_BUCKET = "processor-bucket";
 
+    private static LocalStackContainer localStack;
+
     @Autowired
     private FileProcessorService fileProcessorService;
+
+    @DynamicPropertySource
+    static void registerProperties(DynamicPropertyRegistry registry) {
+        if (isDockerAvailable()) {
+            localStack = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.3.0")).withServices(S3);
+            localStack.start();
+            registry.add("aws.s3.endpoint", () -> localStack.getEndpointOverride(S3).toString());
+            registry.add("aws.s3.region", localStack::getRegion);
+            registry.add("aws.s3.access-key", localStack::getAccessKey);
+            registry.add("aws.s3.secret-key", localStack::getSecretKey);
+            registry.add("aws.s3.bucket", () -> TEST_BUCKET);
+            return;
+        }
+
+        registry.add("aws.s3.endpoint", () -> "http://localhost:4566");
+        registry.add("aws.s3.region", () -> "us-east-1");
+        registry.add("aws.s3.access-key", () -> "test");
+        registry.add("aws.s3.secret-key", () -> "test");
+        registry.add("aws.s3.bucket", () -> TEST_BUCKET);
+    }
 
     private static boolean isDockerAvailable() {
         try {
@@ -67,39 +91,34 @@ class FileProcessorIntegrationTest {
         Assumptions.assumeTrue(isDockerAvailable(),
                 "Docker/Testcontainers is not available in this environment; skipping LocalStack integration test");
 
-        try (LocalStackContainer localStack = new LocalStackContainer(
-                DockerImageName.parse("localstack/localstack:3.3.0")).withServices(S3)) {
-            localStack.start();
+        String endpoint = localStack.getEndpointOverride(S3).toString();
+        String region = localStack.getRegion();
+        String accessKey = localStack.getAccessKey();
+        String secretKey = localStack.getSecretKey();
 
-            String endpoint = localStack.getEndpointOverride(S3).toString();
-            String region = localStack.getRegion();
-            String accessKey = localStack.getAccessKey();
-            String secretKey = localStack.getSecretKey();
-
-            try (S3Client s3Client = createLocalStackClient(endpoint, region, accessKey, secretKey)) {
-                try {
-                    s3Client.createBucket(CreateBucketRequest.builder().bucket(TEST_BUCKET).build());
-                } catch (Exception ignored) {
-                    // bucket may already exist in an existing LocalStack instance
-                }
-
-                String testContent = "accountId,callDurationSec,rate\nACC-001,120,0.05\nACC-002,45,0.05";
-                String fileName = "cdr-integration-test.csv";
-
-                String fileKey = fileProcessorService.uploadFile(testContent.getBytes(StandardCharsets.UTF_8), fileName);
-
-                assertNotNull(fileKey, "Returned S3 key must not be null");
-                assertTrue(fileKey.endsWith("-" + fileName), "Returned key must retain original filename suffix");
-
-                ResponseBytes<GetObjectResponse> responseBytes = s3Client.getObjectAsBytes(
-                        GetObjectRequest.builder()
-                                .bucket(TEST_BUCKET)
-                                .key(fileKey)
-                                .build()
-                );
-
-                assertEquals(testContent, responseBytes.asUtf8String(), "S3 stored content must match original payload");
+        try (S3Client s3Client = createLocalStackClient(endpoint, region, accessKey, secretKey)) {
+            try {
+                s3Client.createBucket(CreateBucketRequest.builder().bucket(TEST_BUCKET).build());
+            } catch (Exception ignored) {
+                // bucket may already exist in an existing LocalStack instance
             }
+
+            String testContent = "accountId,callDurationSec,rate\nACC-001,120,0.05\nACC-002,45,0.05";
+            String fileName = "cdr-integration-test.csv";
+
+            String fileKey = fileProcessorService.uploadFile(testContent.getBytes(StandardCharsets.UTF_8), fileName);
+
+            assertNotNull(fileKey, "Returned S3 key must not be null");
+            assertTrue(fileKey.endsWith("-" + fileName), "Returned key must retain original filename suffix");
+
+            ResponseBytes<GetObjectResponse> responseBytes = s3Client.getObjectAsBytes(
+                    GetObjectRequest.builder()
+                            .bucket(TEST_BUCKET)
+                            .key(fileKey)
+                            .build()
+            );
+
+            assertEquals(testContent, responseBytes.asUtf8String(), "S3 stored content must match original payload");
         }
     }
 }
