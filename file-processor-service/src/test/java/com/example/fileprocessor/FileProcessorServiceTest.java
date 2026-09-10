@@ -13,8 +13,17 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import com.example.fileprocessor.billing.BillingParserService;
+import com.example.fileprocessor.billing.BillingPersistenceService;
+import com.example.fileprocessor.billing.BillingRecord;
+import com.example.fileprocessor.billing.BillingUploadSummary;
+import org.mockito.Mockito;
+
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +45,12 @@ class FileProcessorServiceTest {
     @Captor
     private ArgumentCaptor<RequestBody> requestBodyCaptor;
 
+    @Mock
+    private BillingParserService billingParserService;
+
+    @Mock
+    private BillingPersistenceService billingPersistenceService;
+
     private FileProcessorService fileProcessorService;
 
     private static final String BUCKET_NAME = "processor-bucket";
@@ -45,7 +60,7 @@ class FileProcessorServiceTest {
      */
     @BeforeEach
     void setUp() {
-        fileProcessorService = new FileProcessorService(s3Client, BUCKET_NAME);
+        fileProcessorService = new FileProcessorService(s3Client, BUCKET_NAME, billingParserService, billingPersistenceService);
     }
 
     /**
@@ -75,6 +90,33 @@ class FileProcessorServiceTest {
     /**
      * Verifies that exceptions from S3Client are propagated when upload fails.
      */
+    @Test
+    @DisplayName("Should parse and persist billing records from a CSV upload")
+    void processBillingFile_csv_success() {
+        String csv = String.join(System.lineSeparator(),
+                "customerId,invoiceNumber,amount,currency,transactionDate,description",
+                "CUST-001,INV-1001,10.50,USD,2026-09-01,Monthly plan");
+        BillingRecord billingRecord = new BillingRecord(
+                "CUST-001",
+                "INV-1001",
+                new BigDecimal("10.50"),
+                "USD",
+                LocalDate.of(2026, 9, 1),
+                "Monthly plan"
+        );
+
+        when(billingParserService.parseCsv(csv)).thenReturn(List.of(billingRecord));
+        when(billingPersistenceService.save(billingRecord)).thenReturn(billingRecord);
+
+        BillingUploadSummary summary = fileProcessorService.processBillingFile(csv.getBytes(StandardCharsets.UTF_8), "billing.csv");
+
+        assertNotNull(summary);
+        assertEquals(1, summary.getProcessedRecords());
+        assertEquals("billing.csv", summary.getFileName());
+        verify(billingParserService).parseCsv(csv);
+        verify(billingPersistenceService).save(billingRecord);
+    }
+
     @Test
     @DisplayName("Should propagate SdkClientException when S3Client fails")
     void uploadFile_s3Exception_propagated() {

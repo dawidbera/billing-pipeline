@@ -1,6 +1,6 @@
 package com.example.fileprocessor;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.fileprocessor.billing.BillingValidationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,12 +26,20 @@ public class FileProcessorController {
 
         try {
             String fileId = fileProcessorService.uploadFile(file.getBytes(), file.getOriginalFilename());
+            var summary = fileProcessorService.processBillingFile(file.getBytes(), file.getOriginalFilename());
             return ResponseEntity.ok(Map.of(
                     "message", "File uploaded successfully",
-                    "fileId", fileId
+                    "fileId", fileId,
+                    "processedRecords", summary.getProcessedRecords(),
+                    "fileName", summary.getFileName()
             ));
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Error uploading file: " + e.getMessage()));
+        } catch (BillingValidationException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Billing validation failed",
+                    "details", e.getErrors()
+            ));
         }
     }
 }
