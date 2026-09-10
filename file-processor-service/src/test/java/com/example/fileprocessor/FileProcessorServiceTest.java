@@ -60,7 +60,13 @@ class FileProcessorServiceTest {
      */
     @BeforeEach
     void setUp() {
-        fileProcessorService = new FileProcessorService(s3Client, BUCKET_NAME, billingParserService, billingPersistenceService);
+        fileProcessorService = new FileProcessorService(
+                s3Client,
+                BUCKET_NAME,
+                billingParserService,
+                billingPersistenceService,
+                new com.example.fileprocessor.billing.BillingProcessingService()
+        );
     }
 
     /**
@@ -113,6 +119,8 @@ class FileProcessorServiceTest {
         assertNotNull(summary);
         assertEquals(1, summary.getProcessedRecords());
         assertEquals("billing.csv", summary.getFileName());
+        assertEquals(new BigDecimal("10.50"), summary.getTotalAmount());
+        assertEquals(new BigDecimal("10.50"), summary.getCurrencyTotals().get("USD"));
         verify(billingParserService).parseCsv(csv);
         verify(billingPersistenceService).save(billingRecord);
     }

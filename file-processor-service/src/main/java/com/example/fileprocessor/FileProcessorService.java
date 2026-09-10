@@ -2,6 +2,8 @@ package com.example.fileprocessor;
 
 import com.example.fileprocessor.billing.BillingParserService;
 import com.example.fileprocessor.billing.BillingPersistenceService;
+import com.example.fileprocessor.billing.BillingProcessingService;
+import com.example.fileprocessor.billing.BillingProcessingSummary;
 import com.example.fileprocessor.billing.BillingRecord;
 import com.example.fileprocessor.billing.BillingUploadSummary;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,15 +27,18 @@ public class FileProcessorService {
     private final String bucketName;
     private final BillingParserService billingParserService;
     private final BillingPersistenceService billingPersistenceService;
+    private final BillingProcessingService billingProcessingService;
 
     public FileProcessorService(S3Client s3Client,
                                @Value("${aws.s3.bucket}") String bucketName,
                                BillingParserService billingParserService,
-                               BillingPersistenceService billingPersistenceService) {
+                               BillingPersistenceService billingPersistenceService,
+                               BillingProcessingService billingProcessingService) {
         this.s3Client = s3Client;
         this.bucketName = bucketName;
         this.billingParserService = billingParserService;
         this.billingPersistenceService = billingPersistenceService;
+        this.billingProcessingService = billingProcessingService;
     }
 
     public String uploadFile(byte[] content, String fileName) throws IOException {
@@ -70,6 +75,12 @@ public class FileProcessorService {
             currencyTotals.merge(record.getCurrency(), amount, BigDecimal::add);
         }
 
-        return new BillingUploadSummary(fileName, records.size(), totalAmount, currencyTotals);
+        BillingProcessingSummary processingSummary = billingProcessingService.generateSummary(records);
+        return new BillingUploadSummary(
+                fileName,
+                processingSummary.getProcessedRecords(),
+                processingSummary.getTotalAmount(),
+                processingSummary.getCurrencyTotals()
+        );
     }
 }

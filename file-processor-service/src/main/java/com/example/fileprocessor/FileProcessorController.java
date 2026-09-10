@@ -31,7 +31,9 @@ public class FileProcessorController {
                     "message", "File uploaded successfully",
                     "fileId", fileId,
                     "processedRecords", summary.getProcessedRecords(),
-                    "fileName", summary.getFileName()
+                    "fileName", summary.getFileName(),
+                    "totalAmount", summary.getTotalAmount(),
+                    "currencyTotals", summary.getCurrencyTotals()
             ));
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Error uploading file: " + e.getMessage()));
