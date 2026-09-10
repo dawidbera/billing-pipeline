@@ -11,8 +11,11 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -56,10 +59,17 @@ public class FileProcessorService {
             records = billingParserService.parseCsv(payload);
         }
 
+        Map<String, BigDecimal> currencyTotals = new HashMap<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
         for (BillingRecord record : records) {
             billingPersistenceService.save(record);
+
+            BigDecimal amount = record.getAmount();
+            totalAmount = totalAmount.add(amount);
+            currencyTotals.merge(record.getCurrency(), amount, BigDecimal::add);
         }
 
-        return new BillingUploadSummary(fileName, records.size());
+        return new BillingUploadSummary(fileName, records.size(), totalAmount, currencyTotals);
     }
 }

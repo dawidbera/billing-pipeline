@@ -118,6 +118,42 @@ class FileProcessorServiceTest {
     }
 
     @Test
+    @DisplayName("Should generate total billing summary for processed records")
+    void processBillingFile_generatesSummaryTotals() {
+        String csv = String.join(System.lineSeparator(),
+                "customerId,invoiceNumber,amount,currency,transactionDate,description",
+                "CUST-001,INV-1001,10.50,USD,2026-09-01,Monthly plan",
+                "CUST-002,INV-1002,95.00,USD,2026-09-02,Support plan");
+        BillingRecord record1 = new BillingRecord(
+                "CUST-001",
+                "INV-1001",
+                new BigDecimal("10.50"),
+                "USD",
+                LocalDate.of(2026, 9, 1),
+                "Monthly plan"
+        );
+        BillingRecord record2 = new BillingRecord(
+                "CUST-002",
+                "INV-1002",
+                new BigDecimal("95.00"),
+                "USD",
+                LocalDate.of(2026, 9, 2),
+                "Support plan"
+        );
+
+        when(billingParserService.parseCsv(csv)).thenReturn(List.of(record1, record2));
+        when(billingPersistenceService.save(record1)).thenReturn(record1);
+        when(billingPersistenceService.save(record2)).thenReturn(record2);
+
+        BillingUploadSummary summary = fileProcessorService.processBillingFile(csv.getBytes(StandardCharsets.UTF_8), "billing.csv");
+
+        assertNotNull(summary);
+        assertEquals(2, summary.getProcessedRecords());
+        assertEquals(new BigDecimal("105.50"), summary.getTotalAmount());
+        assertEquals(new BigDecimal("105.50"), summary.getCurrencyTotals().get("USD"));
+    }
+
+    @Test
     @DisplayName("Should propagate SdkClientException when S3Client fails")
     void uploadFile_s3Exception_propagated() {
         byte[] content = "sample payload".getBytes(StandardCharsets.UTF_8);
