@@ -51,6 +51,9 @@ class FileProcessorServiceTest {
     @Mock
     private BillingPersistenceService billingPersistenceService;
 
+    @Mock
+    private com.example.fileprocessor.billing.BillingProcessingJobService billingProcessingJobService;
+
     private FileProcessorService fileProcessorService;
 
     private static final String BUCKET_NAME = "processor-bucket";
@@ -65,7 +68,8 @@ class FileProcessorServiceTest {
                 BUCKET_NAME,
                 billingParserService,
                 billingPersistenceService,
-                new com.example.fileprocessor.billing.BillingProcessingService()
+                new com.example.fileprocessor.billing.BillingProcessingService(),
+                billingProcessingJobService
         );
     }
 

@@ -1,5 +1,6 @@
 package com.example.fileprocessor;
 
+import com.example.fileprocessor.billing.BillingProcessingJob;
 import com.example.fileprocessor.billing.BillingUploadSummary;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,22 +49,20 @@ class FileProcessorControllerTest {
                 "id,amount\n1,100.00".getBytes(StandardCharsets.UTF_8)
         );
 
+        BillingProcessingJob job = new BillingProcessingJob("sample-billing.csv");
+        job.setId(42L);
+
         Mockito.when(fileProcessorService.uploadFile(any(), eq("sample-billing.csv")))
                 .thenReturn("generated-uuid-12345-sample-billing.csv");
-        Mockito.when(fileProcessorService.processBillingFile(any(byte[].class), eq("sample-billing.csv")))
-                .thenReturn(new BillingUploadSummary(
-                        "sample-billing.csv",
-                        1,
-                        new BigDecimal("100.00"),
-                        Map.of("USD", new BigDecimal("100.00"))
-                ));
+        Mockito.when(fileProcessorService.createProcessingJob("sample-billing.csv"))
+                .thenReturn(job);
 
         mockMvc.perform(multipart("/upload").file(file))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("File uploaded successfully"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.message").value("File accepted for processing"))
                 .andExpect(jsonPath("$.fileId").value("generated-uuid-12345-sample-billing.csv"))
-                .andExpect(jsonPath("$.processedRecords").value(1))
-                .andExpect(jsonPath("$.totalAmount").value(100.00));
+                .andExpect(jsonPath("$.jobId").value(42))
+                .andExpect(jsonPath("$.status").value("QUEUED"));
     }
 
     /**

@@ -26,14 +26,14 @@ public class FileProcessorController {
 
         try {
             String fileId = fileProcessorService.uploadFile(file.getBytes(), file.getOriginalFilename());
-            var summary = fileProcessorService.processBillingFile(file.getBytes(), file.getOriginalFilename());
-            return ResponseEntity.ok(Map.of(
-                    "message", "File uploaded successfully",
+            var job = fileProcessorService.createProcessingJob(file.getOriginalFilename());
+            fileProcessorService.processBillingFileAsync(job.getId(), file.getBytes(), file.getOriginalFilename());
+            return ResponseEntity.accepted().body(Map.of(
+                    "message", "File accepted for processing",
                     "fileId", fileId,
-                    "processedRecords", summary.getProcessedRecords(),
-                    "fileName", summary.getFileName(),
-                    "totalAmount", summary.getTotalAmount(),
-                    "currencyTotals", summary.getCurrencyTotals()
+                    "jobId", job.getId(),
+                    "status", "QUEUED",
+                    "fileName", file.getOriginalFilename()
             ));
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Error uploading file: " + e.getMessage()));

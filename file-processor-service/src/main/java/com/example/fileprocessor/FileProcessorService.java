@@ -2,11 +2,14 @@ package com.example.fileprocessor;
 
 import com.example.fileprocessor.billing.BillingParserService;
 import com.example.fileprocessor.billing.BillingPersistenceService;
+import com.example.fileprocessor.billing.BillingProcessingJob;
+import com.example.fileprocessor.billing.BillingProcessingJobService;
 import com.example.fileprocessor.billing.BillingProcessingService;
 import com.example.fileprocessor.billing.BillingProcessingSummary;
 import com.example.fileprocessor.billing.BillingRecord;
 import com.example.fileprocessor.billing.BillingUploadSummary;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -28,17 +31,20 @@ public class FileProcessorService {
     private final BillingParserService billingParserService;
     private final BillingPersistenceService billingPersistenceService;
     private final BillingProcessingService billingProcessingService;
+    private final BillingProcessingJobService billingProcessingJobService;
 
     public FileProcessorService(S3Client s3Client,
                                @Value("${aws.s3.bucket}") String bucketName,
                                BillingParserService billingParserService,
                                BillingPersistenceService billingPersistenceService,
-                               BillingProcessingService billingProcessingService) {
+                               BillingProcessingService billingProcessingService,
+                               BillingProcessingJobService billingProcessingJobService) {
         this.s3Client = s3Client;
         this.bucketName = bucketName;
         this.billingParserService = billingParserService;
         this.billingPersistenceService = billingPersistenceService;
         this.billingProcessingService = billingProcessingService;
+        this.billingProcessingJobService = billingProcessingJobService;
     }
 
     public String uploadFile(byte[] content, String fileName) throws IOException {
@@ -82,5 +88,25 @@ public class FileProcessorService {
                 processingSummary.getTotalAmount(),
                 processingSummary.getCurrencyTotals()
         );
+    }
+
+    @Async
+    public void processBillingFileAsync(Long jobId, byte[] content, String fileName) {
+        try {
+            billingProcessingJobService.markProcessing(jobId);
+            BillingUploadSummary summary = processBillingFile(content, fileName);
+            billingProcessingJobService.markCompleted(jobId, new BillingProcessingSummary(
+                    summary.getProcessedRecords(),
+                    summary.getTotalAmount(),
+                    Map.of(),
+                    summary.getCurrencyTotals()
+            ));
+        } catch (Exception e) {
+            billingProcessingJobService.markFailed(jobId, e.getMessage());
+        }
+    }
+
+    public BillingProcessingJob createProcessingJob(String fileName) {
+        return billingProcessingJobService.createJob(fileName);
     }
 }
