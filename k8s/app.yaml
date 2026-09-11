@@ -51,8 +51,8 @@ spec:
       containers:
         - name: java-app
           # Image loaded locally in the k3d cluster
-          image: ghcr.io/dawidbera/billing-pipeline/java-app:9d87f6ceb716c3cbf05e7aed39fcbcd3dd1d9b6c
-          imagePullPolicy: Always
+          image: java-app:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http

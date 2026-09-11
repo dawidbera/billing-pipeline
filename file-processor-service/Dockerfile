@@ -10,10 +10,10 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
-RUN groupadd --system spring && useradd --system --gid spring --create-home --home-dir /app spring
+RUN groupadd -g 10001 spring && useradd -u 10001 -g spring --create-home --home-dir /app spring
 COPY --from=build /app/target/*.jar app.jar
 RUN chown -R spring:spring /app
 
-USER spring:spring
+USER 10001:10001
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
