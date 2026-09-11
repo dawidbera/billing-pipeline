@@ -1,5 +1,6 @@
 package com.example.fileprocessor;
 
+import com.example.fileprocessor.billing.BillingUploadSummary;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -10,7 +11,9 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -47,11 +50,20 @@ class FileProcessorControllerTest {
 
         Mockito.when(fileProcessorService.uploadFile(any(), eq("sample-billing.csv")))
                 .thenReturn("generated-uuid-12345-sample-billing.csv");
+        Mockito.when(fileProcessorService.processBillingFile(any(byte[].class), eq("sample-billing.csv")))
+                .thenReturn(new BillingUploadSummary(
+                        "sample-billing.csv",
+                        1,
+                        new BigDecimal("100.00"),
+                        Map.of("USD", new BigDecimal("100.00"))
+                ));
 
         mockMvc.perform(multipart("/upload").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("File uploaded successfully"))
-                .andExpect(jsonPath("$.fileId").value("generated-uuid-12345-sample-billing.csv"));
+                .andExpect(jsonPath("$.fileId").value("generated-uuid-12345-sample-billing.csv"))
+                .andExpect(jsonPath("$.processedRecords").value(1))
+                .andExpect(jsonPath("$.totalAmount").value(100.00));
     }
 
     /**
