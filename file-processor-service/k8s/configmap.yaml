@@ -11,3 +11,4 @@ data:
   AWS_S3_ENDPOINT: "http://localstack.cloud-native-app:4566"
   AWS_S3_REGION: "us-east-1"
   AWS_S3_BUCKET: "processor-bucket"
+  DB_URL: "jdbc:postgresql://postgres.cloud-native-app:5432/billingdb"

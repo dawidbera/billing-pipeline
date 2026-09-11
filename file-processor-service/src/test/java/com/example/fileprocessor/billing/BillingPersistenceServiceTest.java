@@ -22,6 +22,9 @@ class BillingPersistenceServiceTest {
     private BillingRecordRepository billingRecordRepository;
 
     @Autowired
+    private BillingProcessingJobRepository billingProcessingJobRepository;
+
+    @Autowired
     private BillingPersistenceService billingPersistenceService;
 
     @Test
@@ -41,5 +44,22 @@ class BillingPersistenceServiceTest {
         assertNotNull(saved);
         assertEquals(1, billingRecordRepository.count());
         assertEquals("CUST-200", billingRecordRepository.findAll().get(0).getCustomerId());
+    }
+
+    @Test
+    @DisplayName("Should persist and retrieve a billing processing job")
+    void shouldPersistBillingProcessingJob() {
+        BillingProcessingJob job = new BillingProcessingJob("invoices.csv");
+        job.setStatus(BillingProcessingJobStatus.PROCESSING);
+        job.setProcessedRecords(10);
+        job.setTotalAmount(new BigDecimal("1500.00"));
+
+        BillingProcessingJob savedJob = billingProcessingJobRepository.save(job);
+
+        assertNotNull(savedJob.getId());
+        assertEquals("invoices.csv", savedJob.getFileName());
+        assertEquals(BillingProcessingJobStatus.PROCESSING, savedJob.getStatus());
+        assertEquals(10, savedJob.getProcessedRecords());
+        assertEquals(new BigDecimal("1500.00"), savedJob.getTotalAmount());
     }
 }

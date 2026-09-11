@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: file-processor
-        image: ghcr.io/dawidbera/billing-pipeline/file-processor:9d87f6ceb716c3cbf05e7aed39fcbcd3dd1d9b6c
-        imagePullPolicy: Always
+        image: file-processor:latest
+        imagePullPolicy: IfNotPresent
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
@@ -49,6 +49,21 @@ spec:
               secretKeyRef:
                 name: file-processor-secret
                 key: AWS_S3_SECRET_KEY
+          - name: DB_URL
+            valueFrom:
+              configMapKeyRef:
+                name: file-processor-config
+                key: DB_URL
+          - name: DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: file-processor-secret
+                key: DB_USERNAME
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: file-processor-secret
+                key: DB_PASSWORD
         ports:
         - containerPort: 8080
         resources:
