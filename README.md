@@ -39,7 +39,39 @@ The repository is organized into two primary microservices and supporting infras
 
 ---
 
-## 2. Architecture & Data Flow
+## 2. Screenshots
+
+This section contains screenshots from the running application and its operational state.
+
+### Project gallery
+
+- [01 - Cluster running](docs/screenshots/01-cluster-running.png)
+- [02 - Upload request](docs/screenshots/02-upload-request.png)
+- [03 - Job completed](docs/screenshots/03-job-completed.png)
+- [04 - Billing summary](docs/screenshots/04-billing-summary.png)
+- [05 - PostgreSQL data](docs/screenshots/05-postgres-data.png)
+- [06 - Health check](docs/screenshots/06-health-check.png)
+- [07 - Monitoring](docs/screenshots/07-monitoring.png)
+
+### Example layout
+
+![Cluster running](docs/screenshots/01-cluster-running.png)
+
+![Upload request](docs/screenshots/02-upload-request.png)
+
+![Job completed](docs/screenshots/03-job-completed.png)
+
+![Billing summary](docs/screenshots/04-billing-summary.png)
+
+![PostgreSQL data](docs/screenshots/05-postgres-data.png)
+
+![Health check](docs/screenshots/06-health-check.png)
+
+![Monitoring dashboard](docs/screenshots/07-monitoring.png)
+
+---
+
+## 3. Architecture & Data Flow
 
 ```mermaid
 graph TD
@@ -85,7 +117,7 @@ graph TD
 
 ---
 
-## 3. Deployment Guide
+## 4. Deployment Guide
 
 ### Option A: Local Scripted Deployment (Recommended)
 
@@ -121,7 +153,7 @@ kubectl apply -f argocd/application.yaml
 
 ---
 
-## 4. Verification & Testing
+## 5. Verification & Testing
 
 ### Step A: Verify Cluster Health
 Verify all components are running across the namespaces:
@@ -206,7 +238,7 @@ kubectl get pods -n monitoring
 
 ---
 
-## 5. Technical Lessons Learned (Gotchas)
+## 6. Technical Lessons Learned (Gotchas)
 
 - **Numeric UID for `runAsNonRoot`**: Kubernetes kubelet requires explicit numeric UIDs (`runAsUser: 10001`, `runAsGroup: 10001`) when enforcing `runAsNonRoot: true`. Non-numeric usernames (such as `USER spring`) cause `CreateContainerConfigError` because the kubelet cannot verify non-root status without looking up `/etc/passwd` inside the image layer.
 - **K3d Image Cache**: In K3s/K3d, the cluster nodes do not share the host's Docker daemon cache. The deployment script resolves this by piping `docker save` into `ctr --namespace k8s.io images import -` inside each node container.
